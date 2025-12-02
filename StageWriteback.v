@@ -71,7 +71,7 @@ module StageWriteback (
             3'b001: processed_load_data = {{16{lh_half[15]}}, lh_half}; // LH
             3'b100: processed_load_data = {24'b0, lb_byte};             // LBU
             3'b101: processed_load_data = {16'b0, lh_half};             // LHU
-            default: processed_load_data = w_mem_data;
+            default: processed_load_data = w_mem_data;   // Default: LW
         endcase
     end
 
