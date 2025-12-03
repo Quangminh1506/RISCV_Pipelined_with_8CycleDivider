@@ -105,12 +105,12 @@ module StageDecode (
     assign stall_load_use = (x_load && x_rd_addr != 0 && (x_rd_addr == rs1 || x_rd_addr == rs2));
 
     //writeback collision (becuz div and ALU ops run in parallel)
-    wire collision_at_wb;
+    wire collision_at_mem;
 
-    assign collision_at_wb = (div_busy_4[6] == 1'b1) && (ctrl_reg_we == 1'b1) && (ctrl_is_div_op == 1'b0);
+    assign collision_at_mem = (div_busy_5[6] == 1'b1) && (ctrl_reg_we == 1'b1) && (ctrl_is_div_op == 1'b0);
 
     //stall system
-    assign stall_req = conflict_div || stall_load_use || collision_at_wb;
+    assign stall_req = conflict_div || stall_load_use || collision_at_mem;
 
     wire [`REG_SIZE:0] rf_rs1_data_raw, rf_rs2_data_raw;
     reg [`REG_SIZE:0] rf_rs1_data_fwd, rf_rs2_data_fwd;
