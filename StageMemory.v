@@ -20,7 +20,17 @@ module StageMemory (
     input                    w_reg_we_fwd,  
     input      [4:0]         w_rd_addr_fwd, 
     input      [`REG_SIZE:0] wb_data_fwd, 
+    
+    input                    div_valid,     
+    input                    div_get_rem,
+    input      [4:0]         div_dst,
+    input      [`REG_SIZE:0] div_quotient, div_remainder,
 
+    //trace div inst
+    input      [`REG_SIZE:0] div_pc_in,    
+    input      [`INST_SIZE:0] div_inst_in,
+    
+    //load/store inst
     output     [`REG_SIZE:0] addr_to_dmem,
     output reg [`REG_SIZE:0] store_data_to_dmem,
     output reg [3:0]         store_we_to_dmem,
@@ -95,15 +105,28 @@ module StageMemory (
             w_funct3 <= 0; 
             w_byte_offset <= 0;
         end else begin
-            w_pc          <= m_pc;
-            w_alu_result  <= m_alu_result_in;
-            w_mem_data    <= load_data_from_dmem;
-            w_rd_addr_out <= m_rd_addr;
-            w_reg_we      <= m_reg_we_in;
-            w_load        <= m_load_in;
-            w_funct3      <= m_funct3_in;
-            w_byte_offset <= m_alu_result_in[1:0];
-            w_inst        <= m_inst_in;
+            if (div_valid) begin              
+                w_pc          <= div_pc_in;
+                w_inst        <= div_inst_in;
+                w_alu_result  <= (div_get_rem) ? div_remainder : div_quotient;
+                w_rd_addr_out <= div_dst;
+                w_reg_we      <= 1'b1;
+                
+                w_load        <= 0; 
+                w_mem_data    <= 0;
+                w_funct3      <= 0; 
+                w_byte_offset <= 0;
+            end else begin
+                w_pc          <= m_pc;
+                w_inst        <= m_inst_in;
+                w_alu_result  <= m_alu_result_in;
+                w_mem_data    <= load_data_from_dmem;
+                w_rd_addr_out <= m_rd_addr;
+                w_reg_we      <= m_reg_we_in;
+                w_load        <= m_load_in;
+                w_funct3      <= m_funct3_in;
+                w_byte_offset <= m_alu_result_in[1:0];
+            end
         end
     end
 
