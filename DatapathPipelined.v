@@ -115,6 +115,9 @@ module DatapathPipelined (
     wire [4:0]         wb_final_dst;
     wire [`REG_SIZE:0] wb_final_data;
 
+    //trace div inst
+    wire [`REG_SIZE:0] ex_div_pc_done;
+    wire [`INST_SIZE:0] ex_div_inst_done;
 
   /****************/
   /* FETCH STAGE */
@@ -191,7 +194,8 @@ module DatapathPipelined (
   /* EXECUTE STAGE */
   /****************/
     StageExecute EXECUTE (
-        .clk(clk), .rst(rst),
+        .clk(clk), 
+        .rst(rst),
         // Inputs from ID/EX 
         .x_pc(id_pc), 
         .x_rs1_data(id_rs1_data), 
@@ -238,7 +242,11 @@ module DatapathPipelined (
         .m_load(ex_load),
         .m_funct3(ex_funct3), 
         .m_inst(ex_inst),
-
+        
+        //output trace div inst
+        .div_pc_done(ex_div_pc_done),
+        .div_inst_done(ex_div_inst_done),
+        
         // branch and hazard Outputs
         .branch_taken(branch_taken), 
         .branch_target(branch_target),
@@ -254,11 +262,12 @@ module DatapathPipelined (
         .div_remainder(div_remainder)
     );
 
- /****************/
+  /****************/
   /* MEMORY STAGE */
   /****************/
     StageMemory MEMORY (
-        .clk(clk), .rst(rst),
+        .clk(clk), 
+        .rst(rst),
         // inputs from EX/MEM 
         .m_pc(ex_pc), 
         .m_alu_result_in(ex_alu_result), 
@@ -270,6 +279,13 @@ module DatapathPipelined (
         .m_load_in(ex_load),
         .m_funct3_in(ex_funct3), 
         .m_inst_in(ex_inst),
+        
+         // Divider result input (divider unit output)
+        .div_valid(div_busy_7[6]),      // Valid bit of stage 7
+        .div_get_rem(div_busy_7[5]),    // remainder flag
+        .div_dst(div_busy_7[4:0]),      // destination register
+        .div_quotient(div_quotient), 
+        .div_remainder(div_remainder),
         
         // forwarding  (WM Bypass - store data)
         .w_reg_we_fwd(wb_final_we), 
@@ -292,13 +308,19 @@ module DatapathPipelined (
         .w_funct3(mem_funct3), 
         .w_byte_offset(mem_byte_offset), 
         .w_inst(mem_inst),
-        .m_result_fwd(m_result_fwd)
+        .m_result_fwd(m_result_fwd),
+        
+        //input trace div inst
+        .div_pc_in(ex_div_pc_done),
+        .div_inst_in(ex_div_inst_done)
     );
 
  /****************/
   /* WRITEBACK STAGE */
   /****************/
     StageWriteback WRITEBACK (
+        .clk (clk),
+        .rst (rst),
         // inputs from MEM/WB 
         .w_pc(mem_pc), 
         .w_alu_result(mem_alu_result), 
@@ -309,13 +331,6 @@ module DatapathPipelined (
         .w_funct3(mem_funct3), 
         .w_byte_offset(mem_byte_offset), 
         .w_inst(mem_inst),
-
-        // Divider result input (divider unit output)
-        .div_valid(div_busy_7[6]),      // Valid bit of stage 7
-        .div_get_rem(div_busy_7[5]),    // remainder flag
-        .div_dst(div_busy_7[4:0]),      // destination register
-        .div_quotient(div_quotient), 
-        .div_remainder(div_remainder),
 
         // outputs
         .final_rf_we(wb_final_we),
