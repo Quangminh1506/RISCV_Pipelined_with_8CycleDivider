@@ -35,7 +35,11 @@ module StageExecute (
     // Hazard Info
     output reg [6:0]         div_busy_0, div_busy_1, div_busy_2, div_busy_3,
     output reg [6:0]         div_busy_4, div_busy_5, div_busy_6, div_busy_7,
-    output     [`REG_SIZE:0] div_quotient, div_remainder
+    output     [`REG_SIZE:0] div_quotient, div_remainder,
+    //Trace div inst
+    output reg [`REG_SIZE:0] div_pc_done,
+    output reg [`INST_SIZE:0] div_inst_done    
+    
 );
     `include "params.vh"
     // forward unit
@@ -94,15 +98,31 @@ module StageExecute (
         .o_remainder(div_remainder), .o_quotient(div_quotient)
     );
 
+    //track div inst
+    reg [`REG_SIZE:0] div_pc_shift [0:7];
+    reg [`INST_SIZE:0] div_inst_shift [0:7];
+    
+    
+
     reg [6:0] div_busy [0:7];
     integer j;
     
     always @(posedge clk) begin
         if (rst) begin
-            for(j=0; j<8; j=j+1) div_busy[j] <= 0;
+            for(j=0; j<8; j=j+1) begin
+                div_busy[j] <= 0;
+                div_pc_shift[j] <= 0;
+                div_inst_shift[j] <= 0;
+            end
         end else begin
-            for(j=1; j<8; j=j+1) div_busy[j] <= div_busy[j-1];
+            for(j=1; j<8; j=j+1) begin
+                div_busy[j] <= div_busy[j-1];
+                div_pc_shift[j] <= div_pc_shift[j-1];
+                div_inst_shift[j] <= div_inst_shift[j-1];
+            end
             div_busy[0] <= {x_is_div_op, x_div_get_rem, x_rd_addr};
+            div_pc_shift[0] <= x_pc;   // save current pc
+            div_inst_shift[0] <= x_inst_in; // save current inst
         end
     end
 
@@ -115,6 +135,10 @@ module StageExecute (
         div_busy_5 = div_busy[5];
         div_busy_6 = div_busy[6]; 
         div_busy_7 = div_busy[7];
+        
+        //output trace
+        div_pc_done = div_pc_shift[7];   
+        div_inst_done = div_inst_shift[7];
     end
 
     always @(posedge clk) begin
