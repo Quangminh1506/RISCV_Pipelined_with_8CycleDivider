@@ -23,6 +23,8 @@
 `define OPCODE_SIZE 6
 
 module StageWriteback (
+    input      clk,
+    input      rst,
     input      [`REG_SIZE:0] w_pc,
     input      [`REG_SIZE:0] w_alu_result,
     input      [`REG_SIZE:0] w_mem_data, 
@@ -33,18 +35,12 @@ module StageWriteback (
     input      [1:0]         w_byte_offset, 
     input      [`INST_SIZE:0] w_inst,
 
-    input                    div_valid,     
-    input                    div_get_rem,   
-    input      [4:0]         div_dst,       
-    input      [`REG_SIZE:0] div_quotient,  
-    input      [`REG_SIZE:0] div_remainder,
-
     output                   final_rf_we,
-    output reg [4:0]         final_rf_dst,
-    output reg [`REG_SIZE:0] final_rf_data,
+    output     [4:0]         final_rf_dst,
+    output     [`REG_SIZE:0] final_rf_data,
 
-    output     [`REG_SIZE:0] trace_pc,
-    output     [`INST_SIZE:0] trace_inst
+    output reg    [`REG_SIZE:0] trace_pc,
+    output reg    [`INST_SIZE:0] trace_inst
 );
     `include "params.vh"
     reg [`REG_SIZE:0] processed_load_data;
@@ -71,26 +67,25 @@ module StageWriteback (
             3'b001: processed_load_data = {{16{lh_half[15]}}, lh_half}; // LH
             3'b100: processed_load_data = {24'b0, lb_byte};             // LBU
             3'b101: processed_load_data = {16'b0, lh_half};             // LHU
-            default: processed_load_data = w_mem_data;   // Default: LW
+            default: processed_load_data = w_mem_data;
         endcase
     end
 
     wire [`REG_SIZE:0] wb_data_main;
     assign wb_data_main = (w_load) ? processed_load_data : w_alu_result;
 
-    assign final_rf_we = w_reg_we || div_valid;
+    assign final_rf_we   = w_reg_we;
+    assign final_rf_dst  = w_rd_addr;
+    assign final_rf_data = wb_data_main;
 
-    always @(*) begin
-        if (div_valid) begin
-            final_rf_dst  = div_dst;
-            final_rf_data = (div_get_rem) ? div_remainder : div_quotient;
+    always @(posedge clk) begin
+        if (rst) begin
+            trace_pc <= 0;
+            trace_inst <= 0;
         end else begin
-            final_rf_dst  = w_rd_addr;
-            final_rf_data = wb_data_main;
+            trace_pc <= (w_inst == 0) ? 0 : w_pc;
+            trace_inst <= w_inst;
         end
     end
-
-    assign trace_pc = (w_inst == 0) ? 0 : w_pc;
-    assign trace_inst = w_inst;
 
 endmodule
