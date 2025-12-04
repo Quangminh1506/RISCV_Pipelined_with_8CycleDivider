@@ -145,8 +145,9 @@ module DatapathPipelined (
         // Hazard & Control Inputs
         .branch_taken(branch_taken),
         .x_load(id_load),         // load-use hazard 
-        .x_rd_addr(id_rd_addr),   // Check Hazard (dùng output của chính ID/EX)        
+		.x_rd_addr(id_rd_addr),   // check hazard   
         // Writeback Inputs 
+		
         .w_reg_we(wb_final_we),
         .w_rd_addr(wb_final_dst),
         .wb_data(wb_final_data),
