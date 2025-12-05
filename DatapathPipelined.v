@@ -145,9 +145,8 @@ module DatapathPipelined (
         // Hazard & Control Inputs
         .branch_taken(branch_taken),
         .x_load(id_load),         // load-use hazard 
-		.x_rd_addr(id_rd_addr),   // check hazard   
+        .x_rd_addr(id_rd_addr),   // Check Hazard (dùng output của chính ID/EX)        
         // Writeback Inputs 
-		
         .w_reg_we(wb_final_we),
         .w_rd_addr(wb_final_dst),
         .wb_data(wb_final_data),
@@ -352,7 +351,7 @@ module MemorySingleCycle #(
     input      [`REG_SIZE:0] pc_to_imem,          // must always be aligned to a 4B boundary
     output reg [`REG_SIZE:0] inst_from_imem,      // the value at memory location pc_to_imem
     input      [`REG_SIZE:0] addr_to_dmem,        // must always be aligned to a 4B boundary
-    output     [`REG_SIZE:0] load_data_from_dmem, // the value at memory location addr_to_dmem
+    output  reg   [`REG_SIZE:0] load_data_from_dmem, // the value at memory location addr_to_dmem
     input      [`REG_SIZE:0] store_data_to_dmem,  // the value to be written to addr_to_dmem, controlled by store_we_to_dmem
     // Each bit determines whether to write the corresponding byte of store_data_to_dmem to memory location addr_to_dmem.
     // E.g., 4'b1111 will write 4 bytes. 4'b0001 will write only the least-significant byte.
@@ -376,7 +375,7 @@ module MemorySingleCycle #(
     inst_from_imem <= mem_array[{pc_to_imem[AddrMsb:AddrLsb]}];
   end
     
-    assign load_data_from_dmem = mem_array[{addr_to_dmem[AddrMsb:AddrLsb]}];
+    //assign load_data_from_dmem = mem_array[{addr_to_dmem[AddrMsb:AddrLsb]}];
 
   always @(negedge clk) begin
     if (store_we_to_dmem[0]) begin
@@ -392,6 +391,7 @@ module MemorySingleCycle #(
       mem_array[addr_to_dmem[AddrMsb:AddrLsb]][31:24] <= store_data_to_dmem[31:24];
     end
     // dmem is "read-first": read returns value before the write
+    load_data_from_dmem <= mem_array[{addr_to_dmem[AddrMsb:AddrLsb]}];
   end
 endmodule
 
@@ -413,7 +413,7 @@ module Processor (
   wire [(8*32)-1:0] test_case;
 
   MemorySingleCycle #(
-      .NUM_WORDS(512)
+	  .NUM_WORDS(8192)
   ) memory (
     .rst                 (rst),
     .clk                 (clk),
