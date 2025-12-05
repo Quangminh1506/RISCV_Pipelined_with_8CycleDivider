@@ -78,6 +78,13 @@ module StageDecode (
     wire [`REG_SIZE:0] imm_j = {{11{d_inst[31]}}, d_inst[31], d_inst[19:12], d_inst[20], d_inst[30:21], 1'b0};
     wire [`REG_SIZE:0] imm_u = {d_inst[31:12], 12'b0};
     
+    // control logic
+    reg [4:0] ctrl_alu_op;
+    reg ctrl_reg_we, ctrl_mem_we, ctrl_branch, ctrl_jal, ctrl_jalr, ctrl_load, ctrl_auipc, ctrl_lui;
+    reg ctrl_is_div_op, ctrl_div_signed, ctrl_div_get_rem;
+    reg [1:0] ctrl_op1_sel, ctrl_op2_sel;
+    reg [3:0] ctrl_mem_mask;
+    
     // Hazard detection
     // Divider denpendency
     reg conflict_div;
@@ -102,7 +109,7 @@ module StageDecode (
     end
     // Load hazard
     wire stall_load_use;
-    assign stall_load_use = (x_load && x_rd_addr != 0 && (x_rd_addr == rs1 || x_rd_addr == rs2));
+    assign stall_load_use = (x_load && x_rd_addr != 0 && (x_rd_addr == rs1 || (x_rd_addr == rs2 && opcode != OPC_STORE))); // becuz WM bypass implemented so exclude store inst
 
     //writeback collision (becuz div and ALU ops run in parallel)
     wire collision_at_mem;
@@ -136,13 +143,6 @@ module StageDecode (
         else rf_rs2_data_fwd = rf_rs2_data_raw;
     end
     
-    // control logic
-    reg [4:0] ctrl_alu_op;
-    reg ctrl_reg_we, ctrl_mem_we, ctrl_branch, ctrl_jal, ctrl_jalr, ctrl_load, ctrl_auipc, ctrl_lui;
-    reg ctrl_is_div_op, ctrl_div_signed, ctrl_div_get_rem;
-    reg [1:0] ctrl_op1_sel, ctrl_op2_sel;
-    reg [3:0] ctrl_mem_mask;
-
     always @(*) begin
         ctrl_alu_op = ALU_ADD; 
         ctrl_reg_we = 0; 
